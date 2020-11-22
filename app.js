@@ -29,6 +29,7 @@ var chosenXAxis = "poverty";
 // function used for updating x-scale var upon click on axis label
 function xScale(healthData, chosenXAxis) {
   // create scales
+  console.log("xScale called for: " + chosenXAxis);
   var xLinearScale = d3.scaleLinear()
     .domain([d3.min(healthData, d => d[chosenXAxis]) * 0.8,
       d3.max(healthData, d => d[chosenXAxis]) * 1.2
@@ -61,13 +62,25 @@ function renderCircles(circlesGroup, newXScale, chosenXAxis) {
   return circlesGroup;
 }
 
+//Adding labels to the state function.
+// var circleLabels = chartGroup.selectAll(null).data(healthData).enter().append("text");
+
+// circleLabels
+//   .attr("x", function(d) { return d.poverty; })
+//   .attr("y", function(d) { return d.healthcare; })
+//   .text(function(d) { return d.abbr; })
+//   .attr("font-family", "sans-serif")
+//   .attr("font-size", "5px")
+//   .attr("fill", "white");
+
+
 // function used for updating circles group with new tooltip
 function updateToolTip(chosenXAxis, circlesGroup) {
 
   var label1;
 
   if (chosenXAxis === "poverty") {
-    label = "In Poverty %";
+    label1 = "In Poverty %";
   }
   else {
     label1 = "Age (Median)";
@@ -87,7 +100,7 @@ function updateToolTip(chosenXAxis, circlesGroup) {
   })
     // onmouseout event
     .on("mouseout", function(data, index) {
-      toolTip.hide(data);
+      toolTip.hide(d.state);
     });
 
   return circlesGroup;
@@ -139,6 +152,8 @@ d3.csv("healthData.csv").then(function(healthData, err) {
     .attr("fill", "blue")
     .attr("opacity", ".5");
 
+  
+
   // Create group for two x-axis labels
   var labelsGroup = chartGroup.append("g")
     .attr("transform", `translate(${width / 2}, ${height + 20})`);
@@ -146,14 +161,14 @@ d3.csv("healthData.csv").then(function(healthData, err) {
   var povertyLabel = labelsGroup.append("text")
     .attr("x", 0)
     .attr("y", 20)
-    .attr("value", "Poverty") // value to grab for event listener
+    .attr("value", "poverty") // value to grab for event listener
     .classed("active", true)
     .text("In Poverty (%)");
 
   var ageLabel = labelsGroup.append("text")
     .attr("x", 0)
     .attr("y", 40)
-    .attr("value", "num_albums") // value to grab for event listener
+    .attr("value", "age") // value to grab for event listener
     .classed("inactive", true)
     .text("Age (Median)");
 
@@ -174,6 +189,7 @@ d3.csv("healthData.csv").then(function(healthData, err) {
     .on("click", function() {
       // get value of selection
       var value = d3.select(this).attr("value");
+      console.log("on click value: " + value);
       if (value !== chosenXAxis) {
 
         // replaces chosenXAxis with value
@@ -195,7 +211,7 @@ d3.csv("healthData.csv").then(function(healthData, err) {
         circlesGroup = updateToolTip(chosenXAxis, circlesGroup);
 
         // changes classes to change bold text
-        if (chosenXAxis === "num_albums") {
+        if (chosenXAxis === "age") {
           ageLabel
             .classed("active", true)
             .classed("inactive", false);
