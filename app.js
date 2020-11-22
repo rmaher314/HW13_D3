@@ -25,6 +25,7 @@ var chartGroup = svg.append("g")
 
 // Initial Params
 var chosenXAxis = "poverty";
+var chosenYAxis = "healthcare";
 
 // function used for updating x-scale var upon click on axis label
 function xScale(healthData, chosenXAxis) {
@@ -40,6 +41,19 @@ function xScale(healthData, chosenXAxis) {
 
 }
 
+// function used for updating y-scale var upon click on label
+function yScale(healthData, chosenYAxis){
+  // create scales
+  console.log("yScale called for: " + chosenYAxis);
+  var yLinearScale = d3.scaleLinear()
+    .domain([d3.min(healthData, d => d[chosenYAxis]) * 0.8,
+      d3.max(healthData, d => d[chosenYAxis]) * 1.2
+    ])
+    .range([height, 0]);
+
+  return yLinearScale;
+}
+
 // function used for updating xAxis var upon click on axis label
 function renderAxes(newXScale, xAxis) {
   var bottomAxis = d3.axisBottom(newXScale);
@@ -51,13 +65,25 @@ function renderAxes(newXScale, xAxis) {
   return xAxis;
 }
 
+// function used for updating yAxis var upon click on axis label
+function renderYAxes(newYScale, yAxis) {
+  var leftAxis = d3.axisLeft(newYScale);
+
+  yAxis.transition()
+    .duration(1000)
+    .call(leftAxis);
+
+  return yAxis;
+}
+
 // function used for updating circles group with a transition to
 // new circles
-function renderCircles(circlesGroup, newXScale, chosenXAxis) {
+function renderCircles(circlesGroup, newXScale, chosenXAxis, newYScale, chosenYAxis) {
 
   circlesGroup.transition()
     .duration(1000)
-    .attr("cx", d => newXScale(d[chosenXAxis]));
+    .attr("cx", d => newXScale(d[chosenXAxis]))
+    .attr("cy", d => newYScale(d[chosenYAxis]));
 
   return circlesGroup;
 }
@@ -75,7 +101,7 @@ function renderCircles(circlesGroup, newXScale, chosenXAxis) {
 
 
 // function used for updating circles group with new tooltip
-function updateToolTip(chosenXAxis, circlesGroup) {
+function updateToolTip(chosenXAxis, chosenYAxis, circlesGroup) {
 
   var label1;
 
@@ -85,26 +111,65 @@ function updateToolTip(chosenXAxis, circlesGroup) {
   else {
     label1 = "Age (Median)";
   }
+  var label2;
 
+  if (chosenYAxis === "healthcare") {
+    label2 = "Healthcare";
+  }
+  else {
+    label2 = "Smokes";
+  }
   var toolTip = d3.tip()
     .attr("class", "tooltip")
     .offset([80, -60])
     .html(function(d) {
-      return (`${d.state}<br>${label} ${d[chosenXAxis]}`);
+      return (`${d.state}<br>${label1} ${d[chosenXAxis]}<br>${label2} ${d[chosenYAxis]}`);
     });
 
   circlesGroup.call(toolTip);
 
   circlesGroup.on("mouseover", function(data) {
-    toolTip.show(data);
+    toolTip.show(data, this);
   })
     // onmouseout event
     .on("mouseout", function(data, index) {
-      toolTip.hide(d.state);
+      toolTip.hide(data);
     });
 
   return circlesGroup;
 }
+
+// function used for updating circles group with new Y tooltip
+// function updateYToolTip(chosenYAxis, circlesGroup) {
+
+//   var label1;
+
+//   if (chosenYAxis === "healthcare") {
+//     label1 = "Healthcare";
+//   }
+//   else {
+//     label1 = "Smokes";
+//   }
+
+//   var toolTip = d3.tip()
+//     .attr("class", "tooltip")
+//     .offset([80, -60])
+//     .html(function(d) {
+//       return (`${d.state}<br>${label1} ${d[chosenYAxis]}`);
+//     });
+
+//   circlesGroup.call(toolTip);
+
+//   circlesGroup.on("mouseover", function(data) {
+//     toolTip.show(data, this);
+//   })
+//     // onmouseout event
+//     .on("mouseout", function(data, index) {
+//       toolTip.hide(data.state);
+//     });
+
+//   return circlesGroup;
+// }
 
 // Retrieve data from the CSV file and execute everything below
 d3.csv("healthData.csv").then(function(healthData, err) {
@@ -121,10 +186,13 @@ d3.csv("healthData.csv").then(function(healthData, err) {
   // xLinearScale function above csv import
   var xLinearScale = xScale(healthData, chosenXAxis);
 
-  // Create y scale function
-  var yLinearScale = d3.scaleLinear()
-    .domain([0, d3.max(healthData, d => d.healthcare)])
-    .range([height, 0]);
+  //yLinearScale function 
+  var yLinearScale = yScale(healthData, chosenYAxis);
+
+  // Create y scale function - comment out below because we created function
+  // var yLinearScale = d3.scaleLinear()
+  //   .domain([0, d3.max(healthData, d => d.healthcare)])
+  //   .range([height, 0]);
 
   // Create initial axis functions
   var bottomAxis = d3.axisBottom(xLinearScale);
@@ -137,7 +205,9 @@ d3.csv("healthData.csv").then(function(healthData, err) {
     .call(bottomAxis);
 
   // append y axis
-  chartGroup.append("g")
+  var yAxis = chartGroup.append("g")
+    .classed("y-axis", true)
+    //.attr("transform", `translate(${width}, 0)`)
     .call(leftAxis);
 
   // append initial circles
@@ -145,13 +215,15 @@ d3.csv("healthData.csv").then(function(healthData, err) {
   var circlesGroup = chartGroup.selectAll("circle")
     .data(healthData)
     .enter()
+
+    //circlesGroup
     .append("circle")
     .attr("cx", d => xLinearScale(d[chosenXAxis]))
-    .attr("cy", d => yLinearScale(d.healthcare))
+    .attr("cy", d => yLinearScale(d[chosenYAxis]))
     .attr("r", 20)
     .attr("fill", "blue")
     .attr("opacity", ".5");
-
+//TODOs - add text state labels here
   
 
   // Create group for two x-axis labels
@@ -173,16 +245,39 @@ d3.csv("healthData.csv").then(function(healthData, err) {
     .text("Age (Median)");
 
   // append y axis
-  chartGroup.append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("y", 0 - margin.left)
-    .attr("x", 0 - (height / 2))
+  var yLabelGroup = chartGroup.append("g")
+    .attr("transform", "rotate(-90)");
+
+  var healthcareLabel = yLabelGroup.append("text")
+    .attr("y", 40 - margin.left)
+    .attr("x", 20 - (height / 2))
     .attr("dy", "1em")
-    .classed("axis-text", true)
+    .attr("value", "healthcare") // value to grab for event listener
+    .classed("active", true)
     .text("Healthcare");
 
+    
+  var smokesLabel = yLabelGroup.append("text")
+  .attr("y", 0 - margin.left)
+  .attr("x", 40 - (height / 2))
+  .attr("dy", "1em")
+  .attr("value", "smokes") // value to grab for event listener
+  .classed("inactive", true)
+  .text("Smokes");
+
+
+
+    // Original Y Labels
+    // chartGroup.append("text")
+    // .attr("transform", "rotate(-90)")
+    // .attr("y", 0 - margin.left)
+    // .attr("x", 0 - (height / 2))
+    // .attr("dy", "1em")
+    // .classed("axis-text", true)
+    // .text("Healthcare");
+
   // updateToolTip function above csv import
-  var circlesGroup = updateToolTip(chosenXAxis, circlesGroup);
+  var circlesGroup = updateToolTip(chosenXAxis, chosenYAxis, circlesGroup);
 
   // x axis labels event listener
   labelsGroup.selectAll("text")
@@ -205,10 +300,10 @@ d3.csv("healthData.csv").then(function(healthData, err) {
         xAxis = renderAxes(xLinearScale, xAxis);
 
         // updates circles with new x values
-        circlesGroup = renderCircles(circlesGroup, xLinearScale, chosenXAxis);
+        circlesGroup = renderCircles(circlesGroup, xLinearScale, chosenXAxis, yLinearScale, chosenYAxis);
 
         // updates tooltips with new info
-        circlesGroup = updateToolTip(chosenXAxis, circlesGroup);
+        circlesGroup = updateToolTip(chosenXAxis, chosenYAxis, circlesGroup);
 
         // changes classes to change bold text
         if (chosenXAxis === "age") {
@@ -229,6 +324,56 @@ d3.csv("healthData.csv").then(function(healthData, err) {
         }
       }
     });
+
+
+    yLabelGroup.selectAll("text")
+    .on("click", function() {
+      // get value of selection
+      var value = d3.select(this).attr("value");
+      console.log("on click value: " + value);
+      if (value !== chosenYAxis) {
+
+        // replaces chosenXAxis with value
+        chosenYAxis = value;
+
+        // console.log(chosenXAxis)
+
+        // functions here found above csv import
+        // updates x scale for new data
+        yLinearScale = yScale(healthData, chosenYAxis);
+
+        // updates x axis with transition
+        yAxis = renderYAxes(yLinearScale, yAxis);
+
+        // updates circles with new x values
+        circlesGroup = renderCircles(circlesGroup, xLinearScale, chosenXAxis, yLinearScale, chosenYAxis);
+
+        // updates tooltips with new info
+        circlesGroup = updateToolTip(chosenXAxis, chosenYAxis, circlesGroup);
+
+        // changes classes to change bold text
+        if (chosenYAxis === "healthcare") {
+          healthcareLabel
+            .classed("active", true)
+            .classed("inactive", false);
+            smokesLabel
+            .classed("active", false)
+            .classed("inactive", true);
+        }
+        else {
+          healthcareLabel
+            .classed("active", false)
+            .classed("inactive", true);
+            smokesLabel
+            .classed("active", true)
+            .classed("inactive", false);
+        }
+      }
+    });
+
+
+    console.log("end of function");
+
 }).catch(function(error) {
   console.log(error);
 });
