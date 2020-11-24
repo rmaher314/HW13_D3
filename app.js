@@ -88,6 +88,15 @@ function renderCircles(circlesGroup, newXScale, chosenXAxis, newYScale, chosenYA
   return circlesGroup;
 }
 
+function renderText(circleStates, newXScale, chosenXAxis, newYScale, chosenYAxis) {
+
+  circleStates.transition()
+    .duration(1000)
+    .attr("dx", d => newXScale(d[chosenXAxis]))
+    .attr("dy", d => newYScale(d[chosenYAxis]))
+
+    return circleStates;
+  }
 //Adding labels to the state function.
 // var circleLabels = chartGroup.selectAll(null).data(healthData).enter().append("text");
 
@@ -135,6 +144,15 @@ function updateToolTip(chosenXAxis, chosenYAxis, circlesGroup) {
     .on("mouseout", function(data, index) {
       toolTip.hide(data);
     });
+
+    circleStates= chartGroup.selectAll("text")    
+    .enter().text(function(d) {
+      console.log("Updating circles data");
+      return d.abbr
+      })
+      .attr("font-family", "arial")
+      .attr("font-size", "10px" )
+      .attr("fill", "black");
 
   return circlesGroup;
 }
@@ -220,11 +238,25 @@ d3.csv("healthData.csv").then(function(healthData, err) {
     .append("circle")
     .attr("cx", d => xLinearScale(d[chosenXAxis]))
     .attr("cy", d => yLinearScale(d[chosenYAxis]))
-    .attr("r", 20)
+    .attr("r", 15)
     .attr("fill", "blue")
-    .attr("opacity", ".5");
-//TODOs - add text state labels here
-  
+    .attr("opacity", ".75")
+    .attr("text", d=>d.abbr);
+    
+  //TODOs - add text state labels here
+  var circleStates = chartGroup.selectAll("text")
+    .data(healthData)
+    .enter()
+  //state text
+    .append("text")
+    .attr("dx", d => xLinearScale(d[chosenXAxis])+2.5)
+    .attr("dy", d => yLinearScale(d[chosenYAxis])+6)
+    .text(function(d) {
+    return d.abbr;
+    })
+    .attr("font-family", "arial")
+    .attr("font-size", "10px" )
+    .attr("fill", "black");
 
   // Create group for two x-axis labels
   var labelsGroup = chartGroup.append("g")
@@ -254,16 +286,16 @@ d3.csv("healthData.csv").then(function(healthData, err) {
     .attr("dy", "1em")
     .attr("value", "healthcare") // value to grab for event listener
     .classed("active", true)
-    .text("Healthcare");
+    .text("Lacks Healthcare (%)");
 
     
   var smokesLabel = yLabelGroup.append("text")
-  .attr("y", 0 - margin.left)
-  .attr("x", 40 - (height / 2))
+  .attr("y", 15 - margin.left)
+  .attr("x", 23 - (height / 2))
   .attr("dy", "1em")
   .attr("value", "smokes") // value to grab for event listener
   .classed("inactive", true)
-  .text("Smokes");
+  .text("Smokes (%)");
 
 
 
@@ -278,6 +310,7 @@ d3.csv("healthData.csv").then(function(healthData, err) {
 
   // updateToolTip function above csv import
   var circlesGroup = updateToolTip(chosenXAxis, chosenYAxis, circlesGroup);
+  //var circleStates = updateToolTip(chosenXAxis, chosenYAxis,circlesGroup, circleStates)
 
   // x axis labels event listener
   labelsGroup.selectAll("text")
@@ -301,9 +334,12 @@ d3.csv("healthData.csv").then(function(healthData, err) {
 
         // updates circles with new x values
         circlesGroup = renderCircles(circlesGroup, xLinearScale, chosenXAxis, yLinearScale, chosenYAxis);
+        circleStates = renderText(circleStates, xLinearScale, chosenXAxis, yLinearScale, chosenYAxis);
 
-        // updates tooltips with new info
+
+        // updates tooltips with new info 
         circlesGroup = updateToolTip(chosenXAxis, chosenYAxis, circlesGroup);
+        //circleStates = updateToolTip(chosenXAxis, chosenYAxis, circleStates)
 
         // changes classes to change bold text
         if (chosenXAxis === "age") {
@@ -347,24 +383,28 @@ d3.csv("healthData.csv").then(function(healthData, err) {
 
         // updates circles with new x values
         circlesGroup = renderCircles(circlesGroup, xLinearScale, chosenXAxis, yLinearScale, chosenYAxis);
+        circleStates = renderText(circleStates, xLinearScale, chosenXAxis, yLinearScale, chosenYAxis);
 
         // updates tooltips with new info
         circlesGroup = updateToolTip(chosenXAxis, chosenYAxis, circlesGroup);
+        //circleStates = updateToolTip((chosenXAxis, chosenYAxis, circleStates))
 
         // changes classes to change bold text
         if (chosenYAxis === "healthcare") {
+          console.log("setting health active")
           healthcareLabel
             .classed("active", true)
             .classed("inactive", false);
-            smokesLabel
+          smokesLabel
             .classed("active", false)
             .classed("inactive", true);
         }
         else {
+          console.log("setting smokes active")
           healthcareLabel
             .classed("active", false)
             .classed("inactive", true);
-            smokesLabel
+          smokesLabel
             .classed("active", true)
             .classed("inactive", false);
         }
